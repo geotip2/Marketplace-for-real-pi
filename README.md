@@ -26,3 +26,17 @@ npm install
 cp .env.example .env
 # Configure your environment variables
 npm start
+
+
+## Getting Started
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/pi-marketplace.git
+   cd pi-marketplace
+npm install
+
+cp .env.example .env
+# Edit .env with your Pi App credentials
+
+npm start
