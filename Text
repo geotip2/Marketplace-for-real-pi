@@ -1,0 +1,36 @@
+pi-marketplace/
+├── README.md
+├── package.json
+├── .env.example
+├── .gitignore
+├── src/
+│   ├── components/
+│   │   ├── ProductCard.js
+│   │   ├── ShoppingCart.js
+│   │   ├── UserProfile.js
+│   │   └── PaymentModal.js
+│   ├── pages/
+│   │   ├── Home.js
+│   │   ├── Marketplace.js
+│   │   ├── ProductDetail.js
+│   │   └── Dashboard.js
+│   ├── services/
+│   │   ├── piSDK.js
+│   │   ├── api.js
+│   │   └── auth.js
+│   ├── utils/
+│   │   ├── constants.js
+│   │   └── helpers.js
+│   ├── hooks/
+│   │   ├── usePiAuth.js
+│   │   └── usePiPayment.js
+│   └── styles/
+│       ├── globals.css
+│       └── components.css
+├── public/
+│   ├── index.html
+│   └── manifest.json
+└── docs/
+    ├── API.md
+    ├── DEPLOYMENT.md
+    └── CONTRIBUTING.md
