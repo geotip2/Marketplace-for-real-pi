@@ -1,0 +1,385 @@
+
+pi-marketplace/
+├── README.md
+├── package.json
+├── .env.example
+├── .gitignore
+├── src/
+│   ├── components/
+│   │   ├── ProductCard.js
+│   │   ├── ShoppingCart.js
+│   │   ├── UserProfile.js
+│   │   └── PaymentModal.js
+│   ├── pages/
+│   │   ├── Home.js
+│   │   ├── Marketplace.js
+│   │   ├── ProductDetail.js
+│   │   └── Dashboard.js
+│   ├── services/
+│   │   ├── piSDK.js
+│   │   ├── api.js
+│   │   └── auth.js
+│   ├── utils/
+│   │   ├── constants.js
+│   │   └── helpers.js
+│   ├── hooks/
+│   │   ├── usePiAuth.js
+│   │   └── usePiPayment.js
+│   └── styles/
+│       ├── globals.css
+│       └── components.css
+├── public/
+│   ├── index.html
+│   └── manifest.json
+└── docs/
+    ├── API.md
+    ├── DEPLOYMENT.md
+    └── CONTRIBUTING.md
+```
+
+Key Files Content
+
+1. README.md
+
+```markdown
+# Pi Marketplace
+
+A decentralized marketplace built on the Pi Network, enabling users to buy and sell goods and services using Pi cryptocurrency.
+
+## Features
+
+- 🔐 Pi Network authentication
+- 💰 Pi cryptocurrency payments
+- 🛍️ Product listings and management
+- 🛒 Shopping cart functionality
+- 📱 Responsive design
+- 🔒 Secure transactions
+
+## Prerequisites
+
+- Pi Network account
+- Pi Browser
+- Node.js 16+
+
+## Installation
+
+```bash
+git clone https://github.com/your-username/pi-marketplace.git
+cd pi-marketplace
+npm install
+cp .env.example .env
+# Configure your environment variables
+npm start
+```
+
+Pi SDK Integration
+
+This project integrates with the Pi SDK for:
+
+· User authentication
+· Payment processing
+· Wallet connectivity
+
+License
+
+MIT
+
+```
+
+### 2. package.json
+```json
+{
+  "name": "pi-marketplace",
+  "version": "1.0.0",
+  "description": "Marketplace for Pi Network with Pi SDK integration",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.0",
+    "axios": "^1.3.0",
+    "web3": "^1.8.0"
+  },
+  "devDependencies": {
+    "react-scripts": "5.0.1"
+  }
+}
+```
+
+3. src/services/piSDK.js
+
+```javascript
+class PiSDKService {
+  constructor() {
+    this.pi = window.Pi;
+    this.initialized = false;
+  }
+
+  async initialize() {
+    try {
+      await this.pi.init({ version: "2.0" });
+      this.initialized = true;
+      return true;
+    } catch (error) {
+      console.error('Pi SDK initialization failed:', error);
+      return false;
+    }
+  }
+
+  async authenticate() {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    try {
+      const user = await this.pi.authenticate();
+      return {
+        success: true,
+        user: {
+          uid: user.uid,
+          username: user.username,
+          accessToken: user.accessToken
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async createPayment(amount, memo, metadata = {}) {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    const paymentData = {
+      amount: amount,
+      memo: memo,
+      metadata: {
+        productId: metadata.productId,
+        orderId: metadata.orderId,
+        ...metadata
+      }
+    };
+
+    try {
+      const payment = await this.pi.createPayment(paymentData);
+      return {
+        success: true,
+        paymentId: payment.identifier
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async completePayment(paymentId, txid) {
+    try {
+      await this.pi.completePayment(paymentId, txid);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+}
+
+export default new PiSDKService();
+```
+
+4. src/hooks/usePiPayment.js
+
+```javascript
+import { useState } from 'react';
+import piSDK from '../services/piSDK';
+
+export const usePiPayment = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const processPayment = async (amount, product, metadata = {}) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Create payment with Pi SDK
+      const paymentResult = await piSDK.createPayment(
+        amount,
+        `Purchase: ${product.name}`,
+        {
+          productId: product.id,
+          orderId: generateOrderId(),
+          ...metadata
+        }
+      );
+
+      if (!paymentResult.success) {
+        throw new Error(paymentResult.error);
+      }
+
+      // Here you would typically send the payment to your backend
+      const backendResponse = await completePurchaseOnBackend(
+        paymentResult.paymentId,
+        product,
+        amount
+      );
+
+      return {
+        success: true,
+        paymentId: paymentResult.paymentId,
+        order: backendResponse.order
+      };
+
+    } catch (err) {
+      setError(err.message);
+      return {
+        success: false,
+        error: err.message
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    processPayment,
+    loading,
+    error
+  };
+};
+
+const generateOrderId = () => {
+  return `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+```
+
+5. src/components/PaymentModal.js
+
+```javascript
+import React from 'react';
+import { usePiPayment } from '../hooks/usePiPayment';
+
+const PaymentModal = ({ product, onClose, onSuccess }) => {
+  const { processPayment, loading, error } = usePiPayment();
+
+  const handlePayment = async () => {
+    const result = await processPayment(product.price, product);
+    
+    if (result.success) {
+      onSuccess(result.order);
+    }
+  };
+
+  return (
+    <div className="payment-modal">
+      <div className="modal-content">
+        <h2>Complete Purchase</h2>
+        <div className="product-info">
+          <h3>{product.name}</h3>
+          <p className="price">{product.price} π</p>
+        </div>
+        
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
+        <div className="payment-actions">
+          <button 
+            onClick={handlePayment} 
+            disabled={loading}
+            className="pay-button"
+          >
+            {loading ? 'Processing...' : `Pay ${product.price} π`}
+          </button>
+          <button onClick={onClose} className="cancel-button">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentModal;
+```
+
+6. .env.example
+
+```env
+REACT_APP_PI_APP_URL=https://your-app-url.com
+REACT_APP_API_BASE_URL=https://your-api-url.com
+REACT_APP_PI_APP_ID=your_pi_app_id
+REACT_APP_PI_API_KEY=your_pi_api_key
+```
+
+7. docs/API.md
+
+```markdown
+# API Documentation
+
+## Pi SDK Integration
+
+### Authentication
+```javascript
+const authResult = await piSDK.authenticate();
+```
+
+Payment Flow
+
+1. Create payment with Pi SDK
+2. Handle payment callback
+3. Complete payment with transaction ID
+
+Webhook Events
+
+· payment_approved
+· payment_complete
+· payment_cancelled
+
+```
+
+## Getting Started
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/pi-marketplace.git
+   cd pi-marketplace
+```
+
+1. Install dependencies
+   ```bash
+   npm install
+   ```
+2. Set up environment variables
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Pi App credentials
+   ```
+3. Run the development server
+   ```bash
+   npm start
+   ```
+
+Important Notes
+
+· The app must be accessed through Pi Browser
+· Pi SDK only works in approved Pi Apps
+· Ensure your app is properly configured in the Pi Developer Portal
+· Test payments in Sandbox mode before going live
+
+This repository provides a solid foundation for building a Pi Network marketplace with proper SDK integration, payment processing, and user authentication.
